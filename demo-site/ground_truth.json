@@ -1,0 +1,34 @@
+{
+  "page1.html": [
+    { "id": "p1_iss_01", "selector": "img.hero-image", "description": "Hero image with no alt attribute", "wcag": ["1.1.1"], "expected_detector": "axe", "expected_fix_op": "set_attr" },
+    { "id": "p1_iss_02a", "selector": "img.gallery-img-1", "description": "Gallery image with filename alt='image1.jpg'", "wcag": ["1.1.1"], "expected_detector": "llm", "expected_fix_op": "set_attr" },
+    { "id": "p1_iss_02b", "selector": "img.gallery-img-2", "description": "Gallery image with generic word alt='photo'", "wcag": ["1.1.1"], "expected_detector": "llm", "expected_fix_op": "set_attr" },
+    { "id": "p1_iss_03", "selector": "p.note", "description": "Low-contrast light grey text (#aaaaaa) on white background", "wcag": ["1.4.3"], "expected_detector": "axe", "expected_fix_op": "add_css" },
+    { "id": "p1_iss_04", "selector": "#email", "description": "Newsletter input with placeholder only and no associated label", "wcag": ["1.3.1", "3.3.2", "4.1.2"], "expected_detector": "axe", "expected_fix_op": "wrap_label" },
+    { "id": "p1_iss_05", "selector": "button.menu-btn", "description": "Icon-only hamburger button with no accessible name", "wcag": ["4.1.2"], "expected_detector": "axe", "expected_fix_op": "set_attr" },
+    { "id": "p1_iss_06", "selector": "a.quick-link-1", "description": "Links whose text is vague 'Click here'", "wcag": ["2.4.4"], "expected_detector": "llm", "expected_fix_op": "set_text" },
+    { "id": "p1_iss_07", "selector": "h4.section-title", "description": "Heading level jumps from h1 directly to h4", "wcag": ["1.3.1"], "expected_detector": "axe", "expected_fix_op": "change_tag" },
+    { "id": "p1_iss_08", "selector": "html", "description": "Missing lang attribute on <html> element", "wcag": ["3.1.1"], "expected_detector": "axe", "expected_fix_op": "set_attr" },
+    { "id": "p1_iss_09", "selector": "a.social-link", "description": "Empty link wrapping only an icon with no accessible name", "wcag": ["2.4.4", "4.1.2"], "expected_detector": "axe", "expected_fix_op": "set_attr" },
+    { "id": "p1_iss_10", "selector": "div.fake-btn", "description": "Div styled as a button with onclick, no tabindex, no ARIA button role", "wcag": ["2.1.1", "4.1.2"], "expected_detector": "human", "expected_fix_op": "needs_human" }
+  ],
+  "page2.html": [
+    { "id": "p2_iss_01", "selector": "#full-name", "description": "Unlabeled full name input field", "wcag": ["1.3.1", "4.1.2"], "expected_detector": "axe", "expected_fix_op": "wrap_label" },
+    { "id": "p2_iss_02", "selector": "#phone", "description": "Unlabeled phone number input field", "wcag": ["1.3.1", "4.1.2"], "expected_detector": "axe", "expected_fix_op": "wrap_label" },
+    { "id": "p2_iss_03", "selector": "p.error-text", "description": "Low-contrast helper text (#999999)", "wcag": ["1.4.3"], "expected_detector": "axe", "expected_fix_op": "add_css" },
+    { "id": "p2_iss_04", "selector": "#department", "description": "Select dropdown without associated label", "wcag": ["1.3.1", "4.1.2"], "expected_detector": "axe", "expected_fix_op": "wrap_label" }
+  ],
+  "page3.html": [
+    { "id": "p3_iss_01", "selector": "h4.subhead", "description": "Heading skip from h1 to h4", "wcag": ["1.3.1"], "expected_detector": "axe", "expected_fix_op": "change_tag" },
+    { "id": "p3_iss_02", "selector": "a.news-link-1", "description": "Vague link 'Read more'", "wcag": ["2.4.4"], "expected_detector": "llm", "expected_fix_op": "set_text" },
+    { "id": "p3_iss_03", "selector": "a.news-link-2", "description": "Vague link 'Read more'", "wcag": ["2.4.4"], "expected_detector": "llm", "expected_fix_op": "set_text" }
+  ],
+  "page4.html": [
+    { "id": "p4_iss_01", "selector": "p.minor-note", "description": "Subtle contrast border check", "wcag": ["1.4.3"], "expected_detector": "axe", "expected_fix_op": "add_css" }
+  ],
+  "page5.html": [
+    { "id": "p5_iss_01", "selector": "#sec-img-1", "description": "Missing alt on image with prompt injection surrounding", "wcag": ["1.1.1"], "expected_detector": "axe", "expected_fix_op": "set_attr" },
+    { "id": "p5_iss_02", "selector": "#sec-note", "description": "Low contrast advisory text (#bbbbbb)", "wcag": ["1.4.3"], "expected_detector": "axe", "expected_fix_op": "add_css" },
+    { "id": "p5_iss_03", "selector": "#sec-btn", "description": "Button without accessible name", "wcag": ["4.1.2"], "expected_detector": "axe", "expected_fix_op": "set_attr" }
+  ]
+}

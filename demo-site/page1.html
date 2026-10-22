@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Sunrise College - Empowering Future Leaders</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.5; margin: 0; padding: 20px; background: #ffffff; color: #1a202c; }
+    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; }
+    .hero-image { width: 100%; max-height: 320px; object-fit: cover; border-radius: 8px; margin: 20px 0; }
+    .gallery { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
+    .gallery img { width: 100%; height: 200px; object-fit: cover; border-radius: 6px; }
+    .note { font-size: 0.95rem; margin: 16px 0; }
+    .newsletter-section { background: #f7fafc; padding: 20px; border-radius: 8px; margin: 24px 0; }
+    .links-list { list-style: none; padding: 0; }
+    .links-list li { margin-bottom: 8px; }
+    .menu-btn { background: none; border: 1px solid #cbd5e0; padding: 6px; border-radius: 4px; cursor: pointer; }
+    .fake-btn { display: inline-block; background: #0b3c49; color: #ffffff; padding: 10px 18px; border-radius: 4px; cursor: pointer; margin-top: 10px; font-weight: bold; }
+    .social-link { display: inline-block; margin-right: 8px; color: #4a5568; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <!-- Issue 8: Missing lang on html -->
+      <!-- Issue 7: Heading skips h1 -> h4 -->
+      <h1>Sunrise College of Science &amp; Arts</h1>
+    </div>
+    <!-- Issue 5: Icon-only button with no accessible name -->
+    <button class="menu-btn">
+      <svg viewBox="0 0 24 24" width="24" height="24">
+        <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" fill="currentColor"/>
+      </svg>
+    </button>
+  </header>
+
+  <main>
+    <!-- Issue 7: h1 jumps directly to h4 -->
+    <h4 class="section-title">Our Academic Programs</h4>
+
+    <!-- Issue 1: Hero image with no alt attribute -->
+    <img class="hero-image" src="/demo/assets/hero.svg">
+
+    <!-- Issue 3: Low-contrast light grey text on white background -->
+    <p class="note" style="color: #aaaaaa; background-color: #ffffff;">
+      Please note: Fall semester admission applications close on November 15.
+    </p>
+
+    <section>
+      <h2>Campus Life &amp; Facilities</h2>
+      <div class="gallery">
+        <!-- Issue 2: Alt text with filename / generic word -->
+        <img class="gallery-img-1" src="/demo/assets/gallery1.svg" alt="image1.jpg">
+        <img class="gallery-img-2" src="/demo/assets/gallery2.svg" alt="photo">
+      </div>
+    </section>
+
+    <section>
+      <h2>Quick Navigation</h2>
+      <ul class="links-list">
+        <!-- Issue 6: Five links with vague "Click here" text -->
+        <li>Admissions Guide: <a class="quick-link-1" href="/demo/admissions.html">Click here</a> to learn how to apply.</li>
+        <li>Financial Aid &amp; Scholarships: <a class="quick-link-2" href="/demo/scholarships.html">Click here</a> for scholarship guidelines.</li>
+        <li>Academic Course Catalog: <a class="quick-link-3" href="/demo/courses.html">Click here</a> to view degree courses.</li>
+        <li>Virtual Campus Tour: <a class="quick-link-4" href="/demo/campus.html">Click here</a> for interactive 360-degree views.</li>
+        <li>Student Support Services: <a class="quick-link-5" href="/demo/contact.html">Click here</a> to connect with counselors.</li>
+      </ul>
+    </section>
+
+    <section class="newsletter-section">
+      <h2>Stay Updated</h2>
+      <p>Subscribe to the Sunrise Weekly Dispatch for campus news and events:</p>
+      <form onsubmit="return false;">
+        <!-- Issue 4: Input without associated label -->
+        <input type="email" id="email" name="email" placeholder="Email">
+        <br>
+        <!-- Issue 10: Div button with onclick, no tabindex, no role (needs human) -->
+        <div class="fake-btn" onclick="alert('Submitted')">Submit Enquiry</div>
+      </form>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 Sunrise College. All rights reserved.</p>
+    <!-- Issue 9: Empty link wrapping only an icon -->
+    <a class="social-link" href="https://example.com/social">
+      <svg viewBox="0 0 24 24" width="20" height="20">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="currentColor"/>
+      </svg>
+    </a>
+  </footer>
+</body>
+</html>

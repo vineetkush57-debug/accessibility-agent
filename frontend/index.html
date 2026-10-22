@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A11y Pilot - Agentic Web Accessibility Auditor & Fixer</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Skip Link for Keyboard Accessibility (WCAG 2.4.1) -->
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <header class="app-header" role="banner">
+    <div class="header-container">
+      <div class="logo-group">
+        <h1 class="app-title">A11y Pilot</h1>
+        <span class="app-badge">Agentic Fixer</span>
+      </div>
+      <div class="header-nav">
+        <div class="lang-select-group">
+          <label for="lang-select">Language:</label>
+          <select id="lang-select" aria-label="Explanation language">
+            <option value="en" selected>English</option>
+            <option value="hinglish">Hinglish</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content" class="app-main" role="main">
+    <div id="app">
+      <!-- Dynamic views rendered by app.js -->
+      <div class="loading-state" role="status">Initializing A11y Pilot...</div>
+    </div>
+  </main>
+
+  <footer class="app-footer" role="contentinfo">
+    <p>&copy; 2026 A11y Pilot. Finding accessibility issues is easy; understanding and fixing them is hard.</p>
+    <p><small>Illustrative heuristic score, not an official legal compliance metric. Always test with real assistive technology.</small></p>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

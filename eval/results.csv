@@ -1,0 +1,6 @@
+page,planted_issues,issues_found,detection_rate,ai_only_catches,fixes_proposed,fixes_attempted,fixes_applied,auto_fix_success,regressions,regression_rate,needs_human,needs_human_rate,avg_retries,score_before,score_after,delta,duration_seconds
+page1.html,11,11,100.0,5,10,8,8,100.0,0,0.0,2,20.0,0.0,38,98,60,7.89
+page2.html,4,2,50.0,0,2,2,2,100.0,0,0.0,0,0.0,0.0,85,100,15,3.15
+page3.html,3,2,66.7,0,2,0,0,100.0,0,0.0,2,100.0,0.0,96,96,0,0.75
+page4.html,1,0,0.0,0,0,0,0,100.0,0,0.0,0,0.0,0.0,100,100,0,0.77
+page5.html,3,3,100.0,0,3,1,1,100.0,0,0.0,2,66.7,0.0,75,85,10,2.24

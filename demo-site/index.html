@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>A11y Pilot - Demo Test Suite</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; max-width: 800px; margin: 40px auto; padding: 0 20px; color: #0E2233; }
+    h1 { color: #0B3C49; }
+    .card { border: 1px solid #CBD5E0; border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; background: #EEF4F6; }
+    .card a { font-weight: bold; color: #0F766E; font-size: 1.1rem; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; background: #F2A33A; color: #000; margin-left: 8px; }
+  </style>
+</head>
+<body>
+  <h1>A11y Pilot Demo Site Suite</h1>
+  <p>These pages contain deliberately planted accessibility defects to benchmark automated rules engines, LLM semantic audits, and the auto-remediation loop.</p>
+
+  <div class="card">
+    <a href="/demo/page1.html">Page 1: Sunrise College Hero Demo</a>
+    <span class="tag">10 Planted Issues</span>
+    <p>Comprehensive mix: missing alt, low contrast text, unlabelled input, missing button names, vague links, heading skip, missing html lang, and un-focusable div button.</p>
+  </div>
+
+  <div class="card">
+    <a href="/demo/page2.html">Page 2: Contact &amp; Enquiry Form</a>
+    <span class="tag">Form Issues</span>
+    <p>Multiple unlabelled inputs, placeholder-only fields, missing autocomplete, and low-contrast error text.</p>
+  </div>
+
+  <div class="card">
+    <a href="/demo/page3.html">Page 3: News &amp; Articles Portal</a>
+    <span class="tag">Content Structure</span>
+    <p>Repetitive 'Read more' links, skipped heading levels, and redundant image alt text.</p>
+  </div>
+
+  <div class="card">
+    <a href="/demo/page4.html">Page 4: Clean Benchmark Page</a>
+    <span class="tag">High Baseline</span>
+    <p>Clean semantic markup with only 2 minor issues to demonstrate low false-positive rates.</p>
+  </div>
+
+  <div class="card">
+    <a href="/demo/page5.html">Page 5: Security &amp; Prompt Injection Benchmark</a>
+    <span class="tag">Adversarial Test</span>
+    <p>Tests agent resilience against prompt injections embedded in HTML comments, attributes, and hidden elements.</p>
+  </div>
+</body>
+</html>

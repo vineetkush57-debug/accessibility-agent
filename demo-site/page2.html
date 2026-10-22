@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sunrise College - Contact Admissions</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.5; margin: 0; padding: 24px; color: #1a202c; background: #ffffff; }
+    .form-container { max-width: 600px; margin: 20px auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px; }
+    .form-group { margin-bottom: 16px; }
+    input, select, textarea { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box; }
+    .error-text { color: #999999; font-size: 0.85rem; margin-top: 4px; } /* Low contrast error */
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Contact Our Admissions Office</h1>
+  </header>
+
+  <main>
+    <div class="form-container">
+      <p>Have questions regarding degree requirements? Fill in your details below:</p>
+      <form action="/demo/submit" method="POST">
+        <!-- Planted issue 1: Unlabeled full name input -->
+        <div class="form-group">
+          <input type="text" id="full-name" name="name" placeholder="Full Legal Name">
+        </div>
+
+        <!-- Planted issue 2: Unlabeled phone input -->
+        <div class="form-group">
+          <input type="tel" id="phone" name="phone" placeholder="Phone Number">
+        </div>
+
+        <!-- Planted issue 3: Low contrast helper/error text -->
+        <p class="error-text" style="color: #999999; background-color: #ffffff;">
+          * Please verify that your country calling code is included.
+        </p>
+
+        <!-- Planted issue 4: Unlabeled department select -->
+        <div class="form-group">
+          <select id="department" name="dept">
+            <option value="">Select Intended Major / Department</option>
+            <option value="cs">Computer Science</option>
+            <option value="bio">Biotechnology</option>
+            <option value="lit">Literature &amp; Arts</option>
+          </select>
+        </div>
+
+        <!-- Planted issue 5: Icon-only inquiry submit button without accessible name -->
+        <button type="submit" id="submit-inquiry" style="background: #0f766e; color: #fff; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">
+          Submit Inquiry
+        </button>
+      </form>
+    </div>
+  </main>
+</body>
+</html>
