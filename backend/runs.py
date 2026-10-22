@@ -33,8 +33,16 @@ class RunManager:
         self._active_runs: set[str] = set()
 
     def can_start_run(self) -> bool:
-        """Limit concurrent active runs to 2."""
-        return len(self._active_runs) < 2
+        """Limit concurrent active scanning/applying runs to 2."""
+        active_statuses = {"created", "scanning", "auditing", "fixing", "applying"}
+        active_count = 0
+        for rid in list(self._active_runs):
+            rep = self.get_report(rid)
+            if rep and rep.status in active_statuses:
+                active_count += 1
+            else:
+                self._active_runs.discard(rid)
+        return active_count < 2
 
     def create_run(
         self,
@@ -93,8 +101,10 @@ class RunManager:
 
         if status is not None:
             report.status = status
-            if status in ("completed", "failed"):
+            if status in ("awaiting_review", "completed", "failed"):
                 self._active_runs.discard(run_id)
+            elif status == "applying":
+                self._active_runs.add(run_id)
         if page_title is not None:
             report.page_title = page_title
         if score_before is not None:

@@ -26,15 +26,21 @@ logger = logging.getLogger(__name__)
 _run_html_store: dict[str, dict[str, str]] = {}
 
 
-def set_run_html(run_id: str, baseline: str, state: str | None = None):
+def set_run_html(
+    run_id: str,
+    baseline: str,
+    state: str | None = None,
+    base_url: str | None = None,
+):
     _run_html_store[run_id] = {
         "baseline": baseline,
         "state": state or baseline,
+        "base_url": base_url or "",
     }
 
 
 def get_run_html(run_id: str) -> dict[str, str]:
-    return _run_html_store.get(run_id, {"baseline": "", "state": ""})
+    return _run_html_store.get(run_id, {"baseline": "", "state": "", "base_url": ""})
 
 
 async def run_scan_pipeline(
@@ -92,7 +98,7 @@ async def run_scan_pipeline(
         finally:
             await context.close()
 
-        set_run_html(run_id, baseline_html)
+        set_run_html(run_id, baseline_html, base_url=url or base_url)
         score_before = compute_score(axe_issues)
 
         # Emit issue_found events
@@ -329,6 +335,7 @@ async def run_apply_pipeline(run_id: str, approved_fix_ids: list[str]):
 
         html_store = get_run_html(run_id)
         state_html = html_store.get("state") or html_store.get("baseline", "")
+        base_url = html_store.get("base_url") or report.source_url
         if not state_html:
             raise RuntimeError("Baseline HTML not found in session memory.")
 
@@ -349,7 +356,7 @@ async def run_apply_pipeline(run_id: str, approved_fix_ids: list[str]):
 
         for fix_id in approved_fix_ids:
             fix = fixes_by_id.get(fix_id)
-            if not fix or fix.needs_human or not fix.patch:
+            if not fix or not fix.patch:
                 continue
 
             target_issue = issues_by_id.get(fix.issue_id)
@@ -372,7 +379,7 @@ async def run_apply_pipeline(run_id: str, approved_fix_ids: list[str]):
 
                 # 2. Re-scan candidate HTML
                 candidate_html = res.html_after
-                re_issues, re_score, re_aria = await rescan_html(candidate_html)
+                re_issues, re_score, re_aria = await rescan_html(candidate_html, base_url=base_url)
                 re_keys = {(iss.rule_id, iss.selector) for iss in re_issues}
 
                 # Check if target issue resolved
@@ -462,7 +469,7 @@ async def run_apply_pipeline(run_id: str, approved_fix_ids: list[str]):
             "Running final comprehensive verification scan...",
             step="report",
         )
-        final_issues, final_score, final_aria = await rescan_html(state_html)
+        final_issues, final_score, final_aria = await rescan_html(state_html, base_url=base_url)
 
         # Update saved HTML state
         html_store["state"] = state_html

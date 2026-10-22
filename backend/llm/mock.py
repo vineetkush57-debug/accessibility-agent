@@ -449,6 +449,92 @@ class MockLLMClient:
                 "human_note": None,
             }
 
+        # Fallback for dynamic/external elements: parse issue data if present
+        try:
+            import json
+
+            if "<page_data>" in user and "</page_data>" in user:
+                raw_json = user.split("<page_data>")[1].split("</page_data>")[0].strip()
+                issue_info = json.loads(raw_json)
+                rule_id = issue_info.get("rule_id", "")
+                selector = issue_info.get("selector", "")
+
+                if selector and rule_id == "aria-allowed-role":
+                    return {
+                        "explanation": "Removes the unsupported ARIA role to allow the native input element semantics to operate correctly.",
+                        "wcag": "4.1.2",
+                        "patch": {
+                            "op": "remove_attr",
+                            "selector": selector,
+                            "name": "role",
+                        },
+                        "confidence": 0.88,
+                        "needs_human": False,
+                        "human_note": None,
+                    }
+
+                if selector and rule_id in ("color-contrast", "llm-contrast"):
+                    return {
+                        "explanation": "Darkens the element text color to #111111 to achieve WCAG AA contrast ratio of at least 4.5:1.",
+                        "wcag": "1.4.3",
+                        "patch": {
+                            "op": "add_css",
+                            "selector": selector,
+                            "property": "color",
+                            "value": "#111111",
+                        },
+                        "confidence": 0.89,
+                        "needs_human": False,
+                        "human_note": None,
+                    }
+
+                if selector and rule_id in ("image-alt", "llm-alt-quality"):
+                    return {
+                        "explanation": "Adds descriptive alternative text for non-text image content to satisfy WCAG 1.1.1.",
+                        "wcag": "1.1.1",
+                        "patch": {
+                            "op": "set_attr",
+                            "selector": selector,
+                            "name": "alt",
+                            "value": "Informational illustration",
+                        },
+                        "confidence": 0.85,
+                        "needs_human": False,
+                        "human_note": None,
+                    }
+
+                if selector and rule_id in ("link-name", "llm-link-purpose"):
+                    return {
+                        "explanation": "Adds an accessible aria-label to clarify the link destination for screen reader users.",
+                        "wcag": "2.4.4",
+                        "patch": {
+                            "op": "set_attr",
+                            "selector": selector,
+                            "name": "aria-label",
+                            "value": "More details",
+                        },
+                        "confidence": 0.85,
+                        "needs_human": False,
+                        "human_note": None,
+                    }
+
+                if selector and rule_id in ("button-name", "llm-button-name"):
+                    return {
+                        "explanation": "Sets an explicit aria-label so assistive devices announce a meaningful button action.",
+                        "wcag": "4.1.2",
+                        "patch": {
+                            "op": "set_attr",
+                            "selector": selector,
+                            "name": "aria-label",
+                            "value": "Action button",
+                        },
+                        "confidence": 0.86,
+                        "needs_human": False,
+                        "human_note": None,
+                    }
+        except Exception as e:
+            logger.debug("Mock generic fallback parsing error: %s", e)
+
         # Default fallback for unmapped elements
         return {
             "explanation": "This issue requires developer review to determine the appropriate semantic remediation.",
