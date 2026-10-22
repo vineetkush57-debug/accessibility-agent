@@ -102,14 +102,41 @@ def parse_wcag_tags(tags: list[str]) -> list[str]:
 
 
 async def create_scan_context(browser: Browser) -> BrowserContext:
-    """Create a clean browser context with standard viewport, realistic user agent, and locale."""
+    """Create a clean browser context with standard viewport 1280x900 and desktop Chrome UA."""
     context = await browser.new_context(
-        viewport={"width": 1280, "height": 800},
+        viewport={"width": 1280, "height": 900},
         locale="en-US",
         service_workers="block",
+        bypass_csp=True,
         user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
     )
     return context
+
+
+async def tag_elements_with_a11y_id(page: Page) -> None:
+    """Assign data-a11y-id='a0', 'a1', ... to every element, preserving existing tags."""
+    await page.evaluate(
+        """() => {
+            let maxId = 0;
+            const all = document.querySelectorAll('*');
+            for (const el of all) {
+                const existing = el.getAttribute('data-a11y-id');
+                if (existing && existing.startsWith('a')) {
+                    const num = parseInt(existing.slice(1), 10);
+                    if (!isNaN(num) && num >= maxId) {
+                        maxId = num + 1;
+                    }
+                }
+            }
+            let count = maxId;
+            for (const el of all) {
+                if (!el.hasAttribute('data-a11y-id')) {
+                    el.setAttribute('data-a11y-id', 'a' + count);
+                    count++;
+                }
+            }
+        }"""
+    )
 
 
 async def load_page(
@@ -126,21 +153,34 @@ async def load_page(
             await page.goto(
                 url,
                 wait_until="domcontentloaded",
-                timeout=settings.PAGE_LOAD_TIMEOUT_MS,
+                timeout=45000,
             )
-            await asyncio.sleep(1.0)
-        except Exception as e:
-            logger.warning("domcontentloaded navigation error, trying load event: %s", e)
-            try:
-                await page.goto(
+            await page.wait_for_timeout(2000)
+
+            # Anti-bot interstitial check (e.g. Cloudflare "Just a moment...")
+            page_title = await page.title()
+            if "just a moment" in page_title.lower() or "attention required" in page_title.lower():
+                logger.info("Anti-bot interstitial detected on %s, fetching via HTTP fallback...", url)
+                import urllib.request
+                req = urllib.request.Request(
                     url,
-                    wait_until="load",
-                    timeout=settings.PAGE_LOAD_TIMEOUT_MS,
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    },
                 )
-                await asyncio.sleep(1.0)
-            except Exception as e2:
-                await page.close()
-                raise RuntimeError(f"Failed to load URL '{url}': {e2!s}") from e2
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    raw_html = resp.read().decode("utf-8", errors="replace")
+                base_tag = f'<base href="{url}">'
+                if "<head>" in raw_html:
+                    raw_html = raw_html.replace("<head>", f"<head>{base_tag}", 1)
+                else:
+                    raw_html = f"{base_tag}{raw_html}"
+                await page.set_content(raw_html, wait_until="domcontentloaded")
+                await page.wait_for_timeout(1000)
+        except Exception as e:
+            await page.close()
+            raise RuntimeError(f"Page load failed: {e!s}") from e
     elif html:
         content_to_load = html
         if base_url:
@@ -149,16 +189,22 @@ async def load_page(
                 content_to_load = content_to_load.replace("<head>", f"<head>{base_tag}", 1)
             else:
                 content_to_load = f"{base_tag}{content_to_load}"
-        await page.set_content(content_to_load, wait_until="domcontentloaded")
-        await asyncio.sleep(0.5)
+        try:
+            await page.set_content(content_to_load, wait_until="domcontentloaded", timeout=45000)
+            await page.wait_for_timeout(1000)
+        except Exception as e:
+            await page.close()
+            raise RuntimeError(f"Page load failed: {e!s}") from e
     else:
         await page.close()
         raise ValueError("Either 'url' or 'html' must be provided.")
 
+    # Tag elements with data-a11y-id
+    await tag_elements_with_a11y_id(page)
     return page
 
 
-async def run_axe(page: Page) -> list[Issue]:
+async def run_axe(page: Page, return_all_keys: bool = False) -> Any:
     """Inject axe.min.js and run rules audit, producing normalized Issue objects."""
     axe_path = get_axe_script_path()
     await page.add_script_tag(path=str(axe_path))
@@ -182,8 +228,45 @@ async def run_axe(page: Page) -> list[Issue]:
         """(options) => {
             return new Promise((resolve, reject) => {
                 axe.run(document, options, (err, results) => {
-                    if (err) reject(err);
-                    else resolve(results);
+                    if (err) return reject(err);
+                    const violations = results.violations || [];
+                    const processed = [];
+                    const allKeys = [];
+                    for (const v of violations) {
+                        const ruleId = v.id || 'unknown';
+                        const nodes = v.nodes || [];
+                        const ruleNodes = [];
+                        for (const n of nodes) {
+                            if (Array.isArray(n.target) && n.target.length === 1 && typeof n.target[0] === 'string') {
+                                try {
+                                    const el = document.querySelector(n.target[0]);
+                                    const a11yId = el ? el.getAttribute('data-a11y-id') : null;
+                                    if (a11yId) {
+                                        const sel = `[data-a11y-id="${a11yId}"]`;
+                                        allKeys.push([ruleId, sel]);
+                                        if (ruleNodes.length < 5) {
+                                            ruleNodes.push({
+                                                selector: sel,
+                                                html: (n.html || '').slice(0, 300),
+                                                failureSummary: n.failureSummary || v.help || '',
+                                            });
+                                        }
+                                    }
+                                } catch (e) {}
+                            }
+                        }
+                        if (ruleNodes.length > 0) {
+                            processed.push({
+                                id: ruleId,
+                                impact: v.impact || 'minor',
+                                tags: v.tags || [],
+                                helpUrl: v.helpUrl || null,
+                                help: v.help || '',
+                                nodes: ruleNodes,
+                            });
+                        }
+                    }
+                    resolve({ violations: processed, allKeys: allKeys });
                 });
             });
         }""",
@@ -191,6 +274,9 @@ async def run_axe(page: Page) -> list[Issue]:
     )
 
     violations = raw_results.get("violations", [])
+    all_keys_raw = raw_results.get("allKeys", [])
+    all_keys = {(k[0], k[1]) for k in all_keys_raw}
+
     issues: list[Issue] = []
     seen_keys = set()
     issue_seq = 1
@@ -205,20 +291,15 @@ async def run_axe(page: Page) -> list[Issue]:
         general_help = violation.get("help", "")
 
         for node in violation.get("nodes", []):
-            targets = node.get("target", [])
-            if isinstance(targets, list) and len(targets) == 1 and isinstance(targets[0], str):
-                selector = targets[0]
-                fixable = True
-            else:
-                selector = " > ".join(str(t) for t in targets)
-                fixable = False  # Complex selector / iframe / shadow DOM
-
+            selector = node.get("selector")
+            if not selector:
+                continue
             key = (rule_id, selector)
             if key in seen_keys:
                 continue
             seen_keys.add(key)
 
-            html_snippet = (node.get("html") or "")[:500]
+            html_snippet = node.get("html", "")
             failure_summary = node.get("failureSummary") or general_help
             msg_clean = " ".join(failure_summary.split())[:300]
 
@@ -233,25 +314,26 @@ async def run_axe(page: Page) -> list[Issue]:
                     html=html_snippet,
                     message=msg_clean,
                     help_url=help_url,
-                    fixable=fixable,
+                    fixable=True,
                 )
             )
             issue_seq += 1
 
+    if return_all_keys:
+        return issues, all_keys
     return issues
 
 
 async def capture_aria_snapshot(page: Page) -> str:
-    """Capture accessibility tree snapshot (Playwright locator aria_snapshot or fallback)."""
+    """Capture accessibility tree snapshot (Playwright locator aria_snapshot or fallback). Wrapped in try/except returning '' on failure."""
     try:
         body = page.locator("body")
         snapshot = await body.aria_snapshot()
         if snapshot:
             return snapshot[:6000]
-    except Exception as e:
-        logger.debug("body.aria_snapshot() failed, trying fallback: %s", e)
+    except Exception:
+        pass
 
-    # Fallback to page.accessibility.snapshot() or DOM text
     try:
         snapshot_dict = await page.accessibility.snapshot()
         if snapshot_dict:
@@ -267,10 +349,29 @@ async def capture_aria_snapshot(page: Page) -> str:
 
             _walk(snapshot_dict)
             return "\n".join(lines)[:6000]
-    except Exception as e2:
-        logger.warning("accessibility.snapshot() fallback also failed: %s", e2)
+    except Exception:
+        pass
 
-    return "ARIA snapshot unavailable"
+    return ""
+
+
+async def scan_page(
+    url: str | None = None,
+    html: str | None = None,
+    base_url: str | None = None,
+) -> tuple[list[Issue], str, str]:
+    """Scan a URL or HTML content, returning (issues, aria_snapshot, baseline_html)."""
+    browser = await get_browser()
+    context = await create_scan_context(browser)
+    try:
+        page = await load_page(context, url=url, html=html, base_url=base_url)
+        issues = await run_axe(page)
+        aria = await capture_aria_snapshot(page)
+        baseline_html = await page.content()
+        await page.close()
+        return issues, aria, baseline_html
+    finally:
+        await context.close()
 
 
 async def rescan_html(

@@ -10,11 +10,12 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, Response
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from backend.agent import get_run_html, run_apply_pipeline, run_scan_pipeline
+from backend.agent import get_run_html, prepare_output, run_apply_pipeline, run_scan_pipeline
 from backend.config import settings
 from backend.runs import run_manager
 from backend.scanner import close_browser, get_browser
@@ -45,6 +46,33 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# Standardized JSON error response handlers
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": exc.detail, "detail": exc.detail},
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    error_msg = "; ".join(f"{e.get('loc', '')}: {e.get('msg', '')}" for e in exc.errors())
+    return JSONResponse(
+        status_code=422,
+        content={"error": f"Validation error: {error_msg}", "detail": error_msg},
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled server error: %s", exc)
+    return JSONResponse(
+        status_code=500,
+        content={"error": f"Server error: {exc!s}", "detail": str(exc)},
+    )
+
 
 # CORS: same-origin and local test ports
 app.add_middleware(
@@ -79,9 +107,15 @@ async def start_scan(req: ScanRequest, bg_tasks: BackgroundTasks):
             detail="Too many concurrent runs in progress. Maximum 2 allowed simultaneously.",
         )
 
-    # Pre-validation for security
+    # URL protocol validation
     if req.url:
-        is_valid, err = validate_url(req.url)
+        clean_url = req.url.strip()
+        if not (clean_url.startswith("http://") or clean_url.startswith("https://")):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid URL: URL must start with http:// or https://",
+            )
+        is_valid, err = validate_url(clean_url)
         if not is_valid:
             raise HTTPException(status_code=400, detail=f"Invalid URL: {err}")
     elif req.html:
@@ -128,7 +162,6 @@ async def stream_events(run_id: str, request: Request, after: int | None = None)
         return JSONResponse(content=[e.model_dump() for e in events])
 
     # 2. Server-Sent Events (SSE) stream
-    # Check Last-Event-ID header for stream reconnection
     last_id_hdr = request.headers.get("Last-Event-ID")
     start_seq = int(last_id_hdr) if (last_id_hdr and last_id_hdr.isdigit()) else 0
 
@@ -151,7 +184,6 @@ async def stream_events(run_id: str, request: Request, after: int | None = None)
                     if ev.type in ("run_completed", "error"):
                         break
                 except TimeoutError:
-                    # Keep-alive comment
                     yield ": keep-alive\n\n"
         finally:
             run_manager.unsubscribe(run_id, queue)
@@ -214,14 +246,29 @@ async def download_fixed_html(run_id: str):
 
     html_store = get_run_html(run_id)
     state_html = html_store.get("state") or html_store.get("baseline", "")
+    prepared_html = prepare_output(state_html, original_url=report.source_url)
 
     return Response(
-        content=state_html,
+        content=prepared_html,
         media_type="text/html",
         headers={
             "Content-Disposition": 'attachment; filename="fixed.html"',
         },
     )
+
+
+@app.get("/api/runs/{run_id}/preview")
+async def preview_fixed_html(run_id: str):
+    """Serve sanitized remediated HTML for iframe preview (never iframe.src=target_url)."""
+    report = run_manager.get_report(run_id)
+    if not report:
+        raise HTTPException(status_code=404, detail=f"Run '{run_id}' not found.")
+
+    html_store = get_run_html(run_id)
+    state_html = html_store.get("state") or html_store.get("baseline", "")
+    prepared_html = prepare_output(state_html, original_url=report.source_url)
+
+    return Response(content=prepared_html, media_type="text/html")
 
 
 @app.get("/api/runs/{run_id}/report.json")

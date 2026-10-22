@@ -31,6 +31,11 @@ def generate_unique_selector(tag: Tag, soup: BeautifulSoup) -> str:
     if not isinstance(tag, Tag):
         return ""
 
+    # Prefer data-a11y-id if present
+    a11y_id = tag.get("data-a11y-id")
+    if a11y_id and isinstance(a11y_id, str):
+        return f'[data-a11y-id="{a11y_id}"]'
+
     # 1. Prefer unique ID if present
     element_id = tag.get("id")
     if element_id and isinstance(element_id, str) and element_id.strip():
@@ -232,6 +237,7 @@ def extract_page_semantics(html: str) -> dict[str, Any]:
         buttons.append(
             {
                 "selector": sel,
+                "tag": btn.name,
                 "text": truncate_str(btn.get_text(), 80),
                 "aria_label": btn.get("aria-label"),
                 "has_svg": has_svg,

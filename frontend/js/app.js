@@ -471,7 +471,7 @@ function renderReportView() {
     </div>
 
     <!-- Download & Export Actions -->
-    <div class="card-box" style="display: flex; gap: 16px; flex-wrap: wrap;">
+    <div class="card-box" style="display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
       <a href="/api/runs/${escapeHtml(state.currentRunId)}/download" class="btn btn-primary" download="fixed.html">
         <span aria-hidden="true">⬇</span>
         <span>${escapeHtml(strings.btnDownloadHtml)}</span>
@@ -480,9 +480,20 @@ function renderReportView() {
         <span aria-hidden="true">📄</span>
         <span>${escapeHtml(strings.btnDownloadReport)}</span>
       </a>
+      <button id="btn-toggle-preview" class="btn btn-secondary">
+        <span aria-hidden="true">👁️</span>
+        <span>Toggle Preview</span>
+      </button>
       <a href="#/" class="btn btn-secondary">
         <span>${escapeHtml(strings.btnBackHome)}</span>
       </a>
+    </div>
+
+    <!-- Optional Remediated Page Preview (srcdoc) -->
+    <div id="preview-container" class="card-box" style="display: none;">
+      <h3>Remediated Page Preview</h3>
+      <p style="margin-top: 0; color: var(--color-muted);"><small>Rendered safely via isolated iframe <code>srcdoc</code>. Scripts are stripped.</small></p>
+      <iframe id="remediated-preview-frame" sandbox="allow-same-origin" style="width: 100%; height: 500px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: #ffffff;"></iframe>
     </div>
 
     <!-- Per-Fix Remediation Summary Table -->
@@ -521,6 +532,31 @@ function renderReportView() {
       <ul>${manualChecksHtml}</ul>
     </div>
   `;
+
+  document.getElementById("btn-toggle-preview")?.addEventListener("click", async () => {
+    const container = document.getElementById("preview-container");
+    const iframe = document.getElementById("remediated-preview-frame");
+    if (!container || !iframe) return;
+
+    if (container.style.display === "none") {
+      container.style.display = "block";
+      if (!iframe.srcdoc) {
+        try {
+          const resp = await fetch(`/api/runs/${state.currentRunId}/preview`);
+          if (resp.ok) {
+            const htmlText = await resp.text();
+            iframe.srcdoc = htmlText;
+          } else {
+            iframe.srcdoc = "<p style='padding:20px; font-family:sans-serif;'>Preview unavailable.</p>";
+          }
+        } catch (err) {
+          iframe.srcdoc = `<p style='padding:20px; font-family:sans-serif; color:red;'>Failed to load preview: ${err.message}</p>`;
+        }
+      }
+    } else {
+      container.style.display = "none";
+    }
+  });
 }
 
 // Start application

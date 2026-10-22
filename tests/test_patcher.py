@@ -153,3 +153,53 @@ def test_dry_run_does_not_mutate():
     assert "<h2" in res.html_after
     # Original html unchanged
     assert "<h4" in html
+
+
+def test_apply_patches_all_ops_sequence():
+    from backend.patcher import apply_patches
+
+    html = """<html><head></head><body>
+        <img id="img1" src="pic.jpg">
+        <a id="link1" role="button" aria-hidden="true" href="#">Click</a>
+        <input id="input1" type="text">
+        <h4 id="head1">Heading</h4>
+        <p id="para1">Notice</p>
+    </body></html>"""
+
+    patches = [
+        SetAttr(selector="#img1", name="alt", value="A pleasant view"),
+        RemoveAttr(selector="#link1", name="aria-hidden"),
+        SetText(selector="#link1", value="Detailed link destination"),
+        WrapLabel(selector="#input1", label_text="Full Name"),
+        AddCss(selector="#para1", property="color", value="#111111"),
+        ChangeTag(selector="#head1", new_tag="h2"),
+    ]
+
+    new_html, applied, failed = apply_patches(html, patches)
+    assert len(applied) == 6
+    assert len(failed) == 0
+    assert 'alt="A pleasant view"' in new_html
+    assert 'aria-hidden' not in new_html
+    assert 'Detailed link destination' in new_html
+    assert '<label for="input1">Full Name</label>' in new_html
+    assert '#para1 { color: #111111 !important; }' in new_html
+    assert '<h2 id="head1">Heading</h2>' in new_html
+
+
+def test_apply_patches_never_raises_on_missing_or_invalid():
+    from backend.patcher import apply_patches
+
+    html = '<html><head></head><body><div id="valid">Content</div></body></html>'
+    patches = [
+        {"op": "set_attr", "selector": "#valid", "name": "aria-label", "value": "Valid item"},
+        {"op": "set_attr", "selector": "#non-existent", "name": "alt", "value": "Ghost"},
+        {"op": "unsupported_op", "selector": "#valid", "foo": "bar"},
+    ]
+
+    new_html, applied, failed = apply_patches(html, patches)
+    assert len(applied) == 1
+    assert len(failed) == 2
+    assert any("not found" in f["error"].lower() for f in failed)
+    assert any("whitelist" in f["error"].lower() for f in failed)
+    assert 'aria-label="Valid item"' in new_html
+

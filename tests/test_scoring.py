@@ -66,3 +66,24 @@ def test_score_floor_at_zero():
     res = compute_score(issues)
     assert res.penalty == 150
     assert res.score == 0
+
+
+def test_scoring_all_impact_levels_individually():
+    assert compute_score([_make_issue("r1", "critical", 1)]).penalty == 10
+    assert compute_score([_make_issue("r2", "serious", 1)]).penalty == 5
+    assert compute_score([_make_issue("r3", "moderate", 1)]).penalty == 2
+    assert compute_score([_make_issue("r4", "minor", 1)]).penalty == 1
+
+
+def test_scoring_multiple_rules_capped_independently():
+    # Rule A: 10 critical issues -> capped at 5 * 10 = 50 penalty
+    # Rule B: 10 serious issues -> capped at 5 * 5 = 25 penalty
+    issues = [_make_issue("ruleA", "critical", i) for i in range(10)]
+    issues += [_make_issue("ruleB", "serious", i + 10) for i in range(10)]
+    res = compute_score(issues)
+    assert res.penalty == 75
+    assert res.score == 25
+    assert res.rules_violated == 2
+    assert res.by_impact["critical"] == 10
+    assert res.by_impact["serious"] == 10
+
