@@ -102,11 +102,12 @@ def parse_wcag_tags(tags: list[str]) -> list[str]:
 
 
 async def create_scan_context(browser: Browser) -> BrowserContext:
-    """Create a clean browser context with standard viewport and locale."""
+    """Create a clean browser context with standard viewport, realistic user agent, and locale."""
     context = await browser.new_context(
         viewport={"width": 1280, "height": 800},
         locale="en-US",
         service_workers="block",
+        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
     )
     return context
 
@@ -124,18 +125,19 @@ async def load_page(
         try:
             await page.goto(
                 url,
-                wait_until="networkidle",
+                wait_until="domcontentloaded",
                 timeout=settings.PAGE_LOAD_TIMEOUT_MS,
             )
+            await asyncio.sleep(1.0)
         except Exception as e:
-            logger.warning("networkidle navigation timed out, trying domcontentloaded: %s", e)
+            logger.warning("domcontentloaded navigation error, trying load event: %s", e)
             try:
                 await page.goto(
                     url,
-                    wait_until="domcontentloaded",
+                    wait_until="load",
                     timeout=settings.PAGE_LOAD_TIMEOUT_MS,
                 )
-                await asyncio.sleep(1.5)
+                await asyncio.sleep(1.0)
             except Exception as e2:
                 await page.close()
                 raise RuntimeError(f"Failed to load URL '{url}': {e2!s}") from e2

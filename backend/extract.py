@@ -1,12 +1,29 @@
-"""Compact element extraction for LLM semantic auditing.
-
-Extracts structured images, links, headings, form fields, and buttons
-from baseline HTML, generating unique and stable CSS selectors.
-"""
-
+import re
 from typing import Any
 
 from bs4 import BeautifulSoup, Tag
+
+
+def format_safe_id_selector(elem_id: str) -> str:
+    """Safely format an ID as a CSS selector.
+
+    Uses #id if it is a pure CSS identifier, otherwise uses [id="..."] attribute selector.
+    """
+    clean_id = elem_id.strip()
+    if re.match(r"^[a-zA-Z_][a-zA-Z0-9_-]*$", clean_id):
+        return f"#{clean_id}"
+    escaped = clean_id.replace("\\", "\\\\").replace('"', '\\"')
+    return f'[id="{escaped}"]'
+
+
+def safe_select(soup: BeautifulSoup, selector: str) -> list[Tag]:
+    """Execute soup.select safely handling any malformed CSS selector exceptions."""
+    if not selector or not selector.strip():
+        return []
+    try:
+        return soup.select(selector)
+    except Exception:
+        return []
 
 
 def generate_unique_selector(tag: Tag, soup: BeautifulSoup) -> str:
@@ -17,8 +34,8 @@ def generate_unique_selector(tag: Tag, soup: BeautifulSoup) -> str:
     # 1. Prefer unique ID if present
     element_id = tag.get("id")
     if element_id and isinstance(element_id, str) and element_id.strip():
-        selector = f"#{element_id.strip()}"
-        if len(soup.select(selector)) == 1:
+        selector = format_safe_id_selector(element_id)
+        if len(safe_select(soup, selector)) == 1:
             return selector
 
     # 2. Build hierarchical path
@@ -29,8 +46,8 @@ def generate_unique_selector(tag: Tag, soup: BeautifulSoup) -> str:
         # If current element has unique ID, anchor here
         c_id = curr.get("id")
         if c_id and isinstance(c_id, str) and c_id.strip():
-            c_sel = f"#{c_id.strip()}"
-            if len(soup.select(c_sel)) == 1:
+            c_sel = format_safe_id_selector(c_id)
+            if len(safe_select(soup, c_sel)) == 1:
                 segments.insert(0, c_sel)
                 break
 
@@ -38,9 +55,13 @@ def generate_unique_selector(tag: Tag, soup: BeautifulSoup) -> str:
         classes = curr.get("class", [])
         class_str = ""
         if isinstance(classes, list) and classes:
-            class_str = "." + ".".join(
-                c for c in classes if c.strip() and not c.startswith("ng-") and ":" not in c
-            )
+            valid_classes = [
+                c.strip()
+                for c in classes
+                if isinstance(c, str) and re.match(r"^[a-zA-Z_][a-zA-Z0-9_-]*$", c.strip())
+            ]
+            if valid_classes:
+                class_str = "." + ".".join(valid_classes[:2])
 
         # Calculate nth-of-type
         parent = curr.parent
@@ -60,7 +81,7 @@ def generate_unique_selector(tag: Tag, soup: BeautifulSoup) -> str:
     selector = " > ".join(segments) if segments else tag.name
 
     # Validate selector resolves to exactly one element; fall back to nth-of-type search
-    matches = soup.select(selector)
+    matches = safe_select(soup, selector)
     if len(matches) == 1 and matches[0] is tag:
         return selector
 
@@ -69,7 +90,7 @@ def generate_unique_selector(tag: Tag, soup: BeautifulSoup) -> str:
     if tag in all_same_tags:
         idx = all_same_tags.index(tag) + 1
         fallback_selector = f"{tag.name}:nth-of-type({idx})"
-        if len(soup.select(fallback_selector)) == 1:
+        if len(safe_select(soup, fallback_selector)) == 1:
             return fallback_selector
 
     return selector

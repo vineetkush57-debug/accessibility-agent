@@ -156,7 +156,10 @@ async def run_scan_pipeline(
                 for raw_iss in llm_audit_raw:
                     sel = raw_iss.get("selector", "")
                     # Hallucination guard: ensure selector resolves to exactly one node
-                    matches = soup.select(sel) if sel else []
+                    try:
+                        matches = soup.select(sel) if sel else []
+                    except Exception:
+                        matches = []
                     if len(matches) != 1:
                         continue
                     if sel in existing_selectors:
